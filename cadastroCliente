@@ -1,0 +1,25 @@
+const clienteForm = document.getElementById("clienteForm");
+const listaClientes = document.getElementById("listaClientes");
+const mensagemCliente = document.getElementById("mensagemCliente");
+
+clienteForm.addEventListener("submit", async (e) => {
+e.preventDefault();
+const nome = document.getElementById("nomeCliente").value;
+const email = document.getElementById("emailCliente").value;
+const telefone = document.getElementById("telefoneCliente").value;
+
+const res = await fetch(API_CLIENTES, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nome, email, telefone })
+});
+
+if (res.ok) {
+    clienteForm.reset();
+    // listarClientes();   <-- remover para não listar na tela
+    mensagemCliente.textContent = "Cadastro realizado com sucesso!";
+    setTimeout(() => { mensagemCliente.textContent = ""; }, 3000);
+} else {
+    mensagemCliente.textContent = "Erro ao cadastrar cliente.";
+}
+});
