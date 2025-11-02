@@ -1,0 +1,95 @@
+from flask import Flask, request, jsonify
+import mysql.connector
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+# Conexão com MySQL
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="Eagles6-",
+    database="restaurante_db"
+)
+cursor = db.cursor(dictionary=True)
+
+# Cadastro Cliente
+@app.route("/cadastro/cliente", methods=["POST"])
+def cadastrar_cliente():
+    data = request.json
+    cursor.execute("INSERT INTO clientes (nome, email) VALUES (%s, %s)", (data["nome"], data["email"]))
+    db.commit()
+    return jsonify({"mensagem": "Realizado com Sucesso"}), 201
+
+# Cadastro Restaurante
+@app.route("/cadastro/restaurante", methods=["POST"])
+def cadastrar_restaurante():
+    data = request.json
+    cursor.execute("INSERT INTO restaurantes (nome, endereco) VALUES (%s, %s)", (data["nome"], data["endereco"]))
+    db.commit()
+    return jsonify({"mensagem": "Realizado com Sucesso"}), 201
+
+# Cadastro Prato
+@app.route("/cadastro/prato", methods=["POST"])
+def cadastrar_prato():
+    data = request.json
+    cursor.execute("SELECT id FROM restaurantes WHERE nome = %s", (data["restaurante_nome"],))
+    restaurante = cursor.fetchone()
+    if not restaurante:
+        return jsonify({"erro": "Restaurante não encontrado"}), 400
+    cursor.execute("INSERT INTO pratos (nome, preco, restaurante_id) VALUES (%s, %s, %s)",
+                   (data["nome"], data["preco"], restaurante["id"]))
+    db.commit()
+    return jsonify({"mensagem": "Realizado com Sucesso"}), 201
+
+# Realizar Pedido
+@app.route("/pedido", methods=["POST"])
+def realizar_pedido():
+    data = request.json
+
+    cursor.execute("SELECT id FROM clientes WHERE nome = %s", (data["cliente_nome"],))
+    cliente = cursor.fetchone()
+    if not cliente:
+        return jsonify({"erro": "Cliente não encontrado"}), 400
+
+    cursor.execute("SELECT id FROM restaurantes WHERE nome = %s", (data["restaurante_nome"],))
+    restaurante = cursor.fetchone()
+    if not restaurante:
+        return jsonify({"erro": "Restaurante não encontrado"}), 400
+
+    cursor.execute("SELECT id FROM pratos WHERE nome = %s AND restaurante_id = %s",
+                   (data["prato_nome"], restaurante["id"]))
+    prato = cursor.fetchone()
+    if not prato:
+        return jsonify({"erro": "Prato não encontrado"}), 400
+
+    cursor.execute("INSERT INTO pedidos (cliente_id, restaurante_id, prato_id) VALUES (%s, %s, %s)",
+                   (cliente["id"], restaurante["id"], prato["id"]))
+    db.commit()
+    return jsonify({"mensagem": "Realizado com Sucesso"}), 201
+
+# Listar clientes
+@app.route("/clientes", methods=["GET"])
+def listar_clientes():
+    cursor.execute("SELECT nome FROM clientes")
+    return jsonify(cursor.fetchall())
+
+# Listar restaurantes
+@app.route("/restaurantes", methods=["GET"])
+def listar_restaurantes():
+    cursor.execute("SELECT nome FROM restaurantes")
+    return jsonify(cursor.fetchall())
+
+# Listar pratos de um restaurante
+@app.route("/pratos/<restaurante_nome>", methods=["GET"])
+def listar_pratos(restaurante_nome):
+    cursor.execute("SELECT id FROM restaurantes WHERE nome = %s", (restaurante_nome,))
+    restaurante = cursor.fetchone()
+    if not restaurante:
+        return jsonify([])
+    cursor.execute("SELECT nome FROM pratos WHERE restaurante_id = %s", (restaurante["id"],))
+    return jsonify(cursor.fetchall())
+
+if __name__ == "__main__":
+    app.run(debug=True)
