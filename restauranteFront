@@ -10,16 +10,17 @@ HTML
 <body>
     <h1>Sistema Restaurante</h1>
 
+    <!-- Cadastro Cliente -->
     <section>
         <h2>Cadastrar Cliente</h2>
         <form id="formCliente">
             <input type="text" id="nomeCliente" placeholder="Nome" required>
-            <input type="email" id="emailCliente" placeholder="Email" required>
+            <input type="email" id="emailCliente" placeholder="E-mail" required>
             <button type="submit">Cadastrar</button>
         </form>
-        <p id="msgCliente" class="mensagem"></p>
     </section>
 
+    <!-- Cadastro Restaurante -->
     <section>
         <h2>Cadastrar Restaurante</h2>
         <form id="formRestaurante">
@@ -27,208 +28,236 @@ HTML
             <input type="text" id="enderecoRestaurante" placeholder="Endereço" required>
             <button type="submit">Cadastrar</button>
         </form>
-        <p id="msgRestaurante" class="mensagem"></p>
     </section>
 
+    <!-- Cadastro Prato -->
     <section>
         <h2>Cadastrar Prato</h2>
         <form id="formPrato">
-            <input type="number" id="restauranteIdPrato" placeholder="ID Restaurante" required>
+            <select id="restaurantePrato" required></select>
             <input type="text" id="nomePrato" placeholder="Nome do Prato" required>
-            <input type="number" step="0.01" id="precoPrato" placeholder="Preço" required>
+            <input type="number" step="0.01" id="precoPrato" placeholder="Preço (R$)" required>
             <button type="submit">Cadastrar</button>
         </form>
-        <p id="msgPrato" class="mensagem"></p>
     </section>
+
+    <!-- Realizar Pedido -->
+    <section>
+        <h2>Realizar Pedido</h2>
+        <form id="formPedido">
+            <select id="clientePedido" required></select>
+            <select id="restaurantePedido" required onchange="atualizarPratosPedido()"></select>
+            <select id="pratoPedido" required></select>
+            <button type="submit">Fazer Pedido</button>
+        </form>
+    </section>
+
+    <p id="mensagem"></p>
 
     <script src="script.js"></script>
 </body>
 </html>
-
+  
 
 CSS 
 
 body {
     font-family: Arial, sans-serif;
     margin: 20px;
+    background: #f4f4f9;
+    color: #333;
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
 }
 
 section {
-    margin-bottom: 30px;
-    padding: 10px;
-    border: 1px solid #ccc;
+    background: #fff;
+    padding: 15px;
+    margin: 15px auto;
     border-radius: 8px;
+    box-shadow: 0px 2px 6px rgba(0,0,0,0.1);
+    max-width: 400px;
 }
 
-input {
-    margin: 5px;
-    padding: 5px;
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+input, select, button {
+    margin: 5px 0;
+    padding: 10px;
+    font-size: 14px;
 }
 
 button {
-    margin: 5px;
-    padding: 5px 10px;
+    background: #27ae60;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
-ul {
-    list-style: none;
-    padding: 0;
+button:hover {
+    background: #219150;
 }
 
-.mensagem {
-    color: green;
+#mensagem {
+    text-align: center;
     font-weight: bold;
-    margin-top: 5px;
+    margin-top: 20px;
+    color: #27ae60;
 }
+
 
 JS
 
-const API_CLIENTES = "http://localhost:5000/clientes";
-const API_RESTAURANTES = "http://localhost:5000/restaurantes";
-const API_PRATOS = "http://localhost:5000/pratos";
-const API_PEDIDOS = "http://localhost:5000/pedidos";
+const apiUrl = "http://127.0.0.1:5000";
+const mensagem = document.getElementById("mensagem");
 
-// ---------- CLIENTES ----------
-const clienteForm = document.getElementById("clienteForm");
-const listaClientes = document.getElementById("listaClientes");
-const mensagemCliente = document.getElementById("mensagemCliente");
+function mostrarMensagem(texto) {
+    mensagem.textContent = texto;
+    setTimeout(() => mensagem.textContent = "", 3000);
+}
 
-clienteForm.addEventListener("submit", async (e) => {
+async function carregarClientes() {
+    const res = await fetch(`${apiUrl}/clientes`);
+    const data = await res.json();
+    const select = document.getElementById("clientePedido");
+    select.innerHTML = "";
+    data.forEach(c => {
+        const option = document.createElement("option");
+        option.value = c.nome;
+        option.textContent = c.nome;
+        select.appendChild(option);
+    });
+}
+
+async function carregarRestaurantes() {
+    const res = await fetch(`${apiUrl}/restaurantes`);
+    const data = await res.json();
+
+    const selectPrato = document.getElementById("restaurantePrato");
+    const selectPedido = document.getElementById("restaurantePedido");
+
+    selectPrato.innerHTML = "";
+    selectPedido.innerHTML = "";
+
+    data.forEach(r => {
+        const option1 = document.createElement("option");
+        option1.value = r.nome;
+        option1.textContent = r.nome;
+        selectPrato.appendChild(option1);
+
+        const option2 = document.createElement("option");
+        option2.value = r.nome;
+        option2.textContent = r.nome;
+        selectPedido.appendChild(option2);
+    });
+
+    atualizarPratosPedido();
+}
+
+async function atualizarPratosPedido() {
+    const restauranteNome = document.getElementById("restaurantePedido").value;
+    if (!restauranteNome) return;
+
+    const res = await fetch(`${apiUrl}/pratos/${restauranteNome}`);
+    const data = await res.json();
+
+    const selectPrato = document.getElementById("pratoPedido");
+    selectPrato.innerHTML = "";
+
+    data.forEach(p => {
+        const option = document.createElement("option");
+        option.value = p.nome;
+        option.textContent = p.nome;
+        selectPrato.appendChild(option);
+    });
+}
+
+// Cliente
+document.getElementById("formCliente").addEventListener("submit", async (e) => {
     e.preventDefault();
     const nome = document.getElementById("nomeCliente").value;
     const email = document.getElementById("emailCliente").value;
-    const telefone = document.getElementById("telefoneCliente").value;
 
-    const res = await fetch(API_CLIENTES, {
+    const resp = await fetch(`${apiUrl}/cadastro/cliente`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, email, telefone })
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({nome, email})
     });
 
-    if (res.ok) {
-        clienteForm.reset();
-        // listarClientes();   <-- remover para não listar na tela
-        mensagemCliente.textContent = "Cadastro realizado com sucesso!";
-        setTimeout(() => { mensagemCliente.textContent = ""; }, 3000);
-    } else {
-        mensagemCliente.textContent = "Erro ao cadastrar cliente.";
-    }
+    const data = await resp.json();
+    mostrarMensagem(data.mensagem || data.message);
+
+    document.getElementById("formCliente").reset();
+    carregarClientes();
 });
 
-
-// ---------- RESTAURANTES ----------
-const restauranteForm = document.getElementById("restauranteForm");
-const listaRestaurantes = document.getElementById("listaRestaurantes");
-const mensagemRestaurante = document.getElementById("mensagemRestaurante");
-
-restauranteForm.addEventListener("submit", async (e) => {
+// Restaurante
+document.getElementById("formRestaurante").addEventListener("submit", async (e) => {
     e.preventDefault();
     const nome = document.getElementById("nomeRestaurante").value;
     const endereco = document.getElementById("enderecoRestaurante").value;
 
-    const res = await fetch(API_RESTAURANTES, {
+    const resp = await fetch(`${apiUrl}/cadastro/restaurante`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, endereco })
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({nome, endereco})
     });
 
-    if (res.ok) {
-        restauranteForm.reset();
-        listarRestaurantes();
-        mensagemRestaurante.textContent = "Cadastro realizado com sucesso!";
-        setTimeout(() => { mensagemRestaurante.textContent = ""; }, 3000);
-    } else {
-        mensagemRestaurante.textContent = "Erro ao cadastrar restaurante.";
-    }
+    const data = await resp.json();
+    mostrarMensagem(data.mensagem || data.message);
+
+    document.getElementById("formRestaurante").reset();
+    carregarRestaurantes();
 });
 
-async function listarRestaurantes() {
-    const res = await fetch(API_RESTAURANTES);
-    const restaurantes = await res.json();
-    listaRestaurantes.innerHTML = "";
-    restaurantes.forEach(r => {
-        const li = document.createElement("li");
-        li.textContent = `${r.id} - ${r.nome} | ${r.endereco}`;
-        listaRestaurantes.appendChild(li);
-    });
-}
-listarRestaurantes();
-
-// ---------- PRATOS ----------
-const pratoForm = document.getElementById("pratoForm");
-const listaPratos = document.getElementById("listaPratos");
-const mensagemPrato = document.getElementById("mensagemPrato");
-
-pratoForm.addEventListener("submit", async (e) => {
+// Prato
+document.getElementById("formPrato").addEventListener("submit", async (e) => {
     e.preventDefault();
+    const restaurante_nome = document.getElementById("restaurantePrato").value;
     const nome = document.getElementById("nomePrato").value;
-    const preco = parseFloat(document.getElementById("precoPrato").value);
-    const restaurante_id = parseInt(document.getElementById("restauranteIdPrato").value);
+    const preco = document.getElementById("precoPrato").value;
 
-    const res = await fetch(API_PRATOS, {
+    const resp = await fetch(`${apiUrl}/cadastro/prato`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ nome, preco, restaurante_id })
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({restaurante_nome, nome, preco})
     });
 
-    if (res.ok) {
-        pratoForm.reset();
-        listarPratos();
-        mensagemPrato.textContent = "Cadastro realizado com sucesso!";
-        setTimeout(() => { mensagemPrato.textContent = ""; }, 3000);
-    } else {
-        mensagemPrato.textContent = "Erro ao cadastrar prato.";
-    }
+    const data = await resp.json();
+    mostrarMensagem(data.mensagem || data.message);
+
+    document.getElementById("formPrato").reset();
+    atualizarPratosPedido();
 });
-
-async function listarPratos() {
-    const res = await fetch(API_PRATOS);
-    const pratos = await res.json();
-    listaPratos.innerHTML = "";
-    pratos.forEach(p => {
-        const li = document.createElement("li");
-        li.textContent = `${p.id} - ${p.nome} | R$${p.preco} | Restaurante ${p.restaurante_id}`;
-        listaPratos.appendChild(li);
-    });
-}
-listarPratos();
 
 // Pedido
-const pedidoForm = document.getElementById("pedidoForm");
-const listaPedidos = document.getElementById("listaPedidos");
-const mensagemPedido = document.getElementById("mensagemPedido");
-
-pedidoForm.addEventListener("submit", async (e) => {
+document.getElementById("formPedido").addEventListener("submit", async (e) => {
     e.preventDefault();
-    const cliente_id = parseInt(document.getElementById("clienteIdPedido").value);
-    const restaurante_id = parseInt(document.getElementById("restauranteIdPedido").value);
-    const itens = document.getElementById("itensPedido").value;
+    const cliente_nome = document.getElementById("clientePedido").value;
+    const restaurante_nome = document.getElementById("restaurantePedido").value;
+    const prato_nome = document.getElementById("pratoPedido").value;
 
-    const res = await fetch(API_PEDIDOS, {
+    const resp = await fetch(`${apiUrl}/pedido`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cliente_id, restaurante_id, itens })
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({cliente_nome, restaurante_nome, prato_nome})
     });
 
-    if (res.ok) {
-        pedidoForm.reset();
-        listarPedidos();
-        mensagemPedido.textContent = "Pedido criado com sucesso!";
-        setTimeout(() => { mensagemPedido.textContent = ""; }, 3000);
-    } else {
-        mensagemPedido.textContent = "Erro ao criar pedido.";
-    }
+    const data = await resp.json();
+    mostrarMensagem(data.mensagem || data.message);
+    document.getElementById("formPedido").reset();
 });
 
-async function listarPedidos() {
-    const res = await fetch(API_PEDIDOS);
-    const pedidos = await res.json();
-    listaPedidos.innerHTML = "";
-    pedidos.forEach(p => {
-        const li = document.createElement("li");
-        li.textContent = `Pedido ${p.id} | Cliente ${p.cliente_id} | Restaurante ${p.restaurante_id} | Itens: ${p.itens}`;
-        listaPedidos.appendChild(li);
-    });
-}
-listarPedidos();
+document.getElementById("restaurantePedido").addEventListener("change", atualizarPratosPedido);
+
+// Inicializa selects
+carregarClientes();
+carregarRestaurantes();
 
